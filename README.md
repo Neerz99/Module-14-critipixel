@@ -73,10 +73,31 @@ symfony console sass:build
 
 ### Tests
 ```bash
-symfony php bin/phpunit
+symfony console sass:build --env=test
+composer test
 ```
 
-*Note : Penser à charger les fixtures avant chaque éxécution des tests.*
+`composer test` recrée la base de test, charge les fixtures puis lance PHPUnit.
+Chaque test est exécuté dans une transaction annulée à la fin (DAMADoctrineTestBundle) :
+les fixtures n'ont donc besoin d'être chargées qu'une seule fois.
+
+* Tests unitaires : `tests/Unit` (calcul de la moyenne et du nombre de notes par valeur)
+* Tests fonctionnels : `tests/Functional` (inscription, connexion, ajout d'un avis, filtrage par recherche et par tags)
+
+### Qualité du code
+```bash
+composer phpstan    # PHPStan niveau 6 (extensions Symfony et Doctrine)
+composer cs-check   # PHP CS Fixer (règles PSR-12 et Symfony), sans modifier les fichiers
+composer cs-fix     # applique les corrections de style
+```
+
+*Note : PHPStan s'appuie sur le conteneur du cache `dev`, lancer `symfony console cache:warmup` au préalable.*
+
+### Intégration continue
+Le workflow GitHub Actions `.github/workflows/ci.yml` est exécuté à chaque push sur `main` et à chaque pull request :
+
+* analyse statique : PHP CS Fixer puis PHPStan ;
+* tests : PostgreSQL 16, compilation Sass, migrations, fixtures puis PHPUnit avec couverture, sur PHP 8.2 et 8.3.
 
 ### Serveur web
 ```bash

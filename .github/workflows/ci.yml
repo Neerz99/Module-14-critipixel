@@ -78,6 +78,9 @@ jobs:
       - name: Installation des dépendances
         run: composer install --no-interaction --no-progress --no-scripts
 
+      - name: Installation des assets (importmap)
+        run: php bin/console importmap:install
+
       - name: Compilation des styles (Sass)
         run: php bin/console sass:build --env=test
 

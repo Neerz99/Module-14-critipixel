@@ -8,14 +8,18 @@ use App\Form\ReviewType;
 use App\List\ListFactory;
 use App\List\VideoGameList\Pagination;
 use App\Model\Entity\Review;
+use App\Model\Entity\User;
 use App\Model\Entity\VideoGame;
+use App\Rating\CalculateAverageRating;
+use App\Rating\CountRatingsPerValue;
+use App\Security\Voter\VideoGameVoter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\ValueResolver;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/', name: 'video_games_')]
 final class VideoGameController extends AbstractController
@@ -33,18 +37,39 @@ final class VideoGameController extends AbstractController
     }
 
     #[Route('{slug}', name: 'show', methods: [Request::METHOD_GET, Request::METHOD_POST])]
-    public function show(VideoGame $videoGame, EntityManagerInterface $entityManager, Request $request): Response
-    {
+    public function show(
+        VideoGame $videoGame,
+        EntityManagerInterface $entityManager,
+        Request $request,
+        CalculateAverageRating $calculateAverageRating,
+        CountRatingsPerValue $countRatingsPerValue,
+    ): Response {
+        if ($request->isMethod(Request::METHOD_POST)) {
+            if (!$this->getUser() instanceof User) {
+                throw new HttpException(Response::HTTP_UNAUTHORIZED, 'Vous devez être connecté pour noter un jeu.');
+            }
+
+            $this->denyAccessUnlessGranted(VideoGameVoter::REVIEW, $videoGame);
+        }
+
         $review = new Review();
 
         $form = $this->createForm(ReviewType::class, $review)->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->denyAccessUnlessGranted('review', $videoGame);
+            /** @var User $user */
+            $user = $this->getUser();
+
             $review->setVideoGame($videoGame);
-            $review->setUser($this->getUser());
+            $review->setUser($user);
+            $videoGame->getReviews()->add($review);
+
+            $calculateAverageRating->calculateAverage($videoGame);
+            $countRatingsPerValue->countRatingsPerValue($videoGame);
+
             $entityManager->persist($review);
             $entityManager->flush();
+
             return $this->redirectToRoute('video_games_show', ['slug' => $videoGame->getSlug()]);
         }
 

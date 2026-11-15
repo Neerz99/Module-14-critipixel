@@ -11,11 +11,15 @@ use Doctrine\ORM\Mapping\GeneratedValue;
 use Doctrine\ORM\Mapping\Id;
 use Doctrine\ORM\Mapping\JoinColumn;
 use Doctrine\ORM\Mapping\ManyToOne;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotNull;
 use Symfony\Component\Validator\Constraints\Range;
 
 #[Entity]
 class Review
 {
+    public const COMMENT_MAX_LENGTH = 1000;
+
     #[Id]
     #[GeneratedValue]
     #[Column]
@@ -29,10 +33,12 @@ class Review
     #[JoinColumn(nullable: false)]
     private User $user;
 
+    #[NotNull(message: 'La note est obligatoire.')]
     #[Range(min: 1, max: 5)]
     #[Column]
-    private int $rating;
+    private ?int $rating = null;
 
+    #[Length(max: self::COMMENT_MAX_LENGTH, maxMessage: 'Le commentaire ne doit pas dépasser {{ limit }} caractères.')]
     #[Column(type: Types::TEXT, nullable: true)]
     private ?string $comment = null;
 
@@ -49,6 +55,7 @@ class Review
     public function setVideoGame(VideoGame $videoGame): Review
     {
         $this->videoGame = $videoGame;
+
         return $this;
     }
 
@@ -60,17 +67,19 @@ class Review
     public function setUser(User $user): Review
     {
         $this->user = $user;
+
         return $this;
     }
 
-    public function getRating(): int
+    public function getRating(): ?int
     {
         return $this->rating;
     }
 
-    public function setRating(int $rating): Review
+    public function setRating(?int $rating): Review
     {
         $this->rating = $rating;
+
         return $this;
     }
 
@@ -82,6 +91,7 @@ class Review
     public function setComment(?string $comment): Review
     {
         $this->comment = $comment;
+
         return $this;
     }
 }

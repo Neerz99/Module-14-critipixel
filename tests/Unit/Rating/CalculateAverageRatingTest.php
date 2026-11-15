@@ -10,10 +10,7 @@ use App\Rating\RatingHandler;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Vérifie le calcul de la moyenne des notes attribuées par les utilisateurs à un jeu vidéo.
- *
- * Règle métier : la moyenne est arrondie à l'entier supérieur, et vaut null
- * tant qu'aucun utilisateur n'a noté le jeu.
+ * Moyenne arrondie à l'entier supérieur, null sans avis.
  */
 final class CalculateAverageRatingTest extends TestCase
 {

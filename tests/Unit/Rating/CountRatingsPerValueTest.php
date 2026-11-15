@@ -10,10 +10,6 @@ use App\Model\Entity\VideoGame;
 use App\Rating\RatingHandler;
 use PHPUnit\Framework\TestCase;
 
-/**
- * Vérifie le décompte, pour chaque valeur de 1 à 5, du nombre de notes attribuées
- * par les utilisateurs à un jeu vidéo.
- */
 final class CountRatingsPerValueTest extends TestCase
 {
     /**
@@ -87,7 +83,7 @@ final class CountRatingsPerValueTest extends TestCase
 
     private static function assertNumberOfRatingsPerValue(
         NumberOfRatingPerValue $expected,
-        NumberOfRatingPerValue $actual
+        NumberOfRatingPerValue $actual,
     ): void {
         self::assertSame($expected->getNumberOfOne(), $actual->getNumberOfOne(), 'Nombre de notes à 1');
         self::assertSame($expected->getNumberOfTwo(), $actual->getNumberOfTwo(), 'Nombre de notes à 2');
@@ -112,7 +108,7 @@ final class CountRatingsPerValueTest extends TestCase
         int $two = 0,
         int $three = 0,
         int $four = 0,
-        int $five = 0
+        int $five = 0,
     ): NumberOfRatingPerValue {
         $expected = new NumberOfRatingPerValue();
 

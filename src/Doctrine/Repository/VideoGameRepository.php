@@ -45,7 +45,7 @@ final class VideoGameRepository extends ServiceEntityRepository
                         $queryBuilder->expr()->like('vg.test', ':search'),
                     )
                 )
-                ->setParameter('search', '%' . $filter->getSearch() . '%');
+                ->setParameter('search', '%'.$filter->getSearch().'%');
         }
 
         if ([] !== $filter->getTags()) {

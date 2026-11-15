@@ -11,8 +11,7 @@ use Doctrine\Persistence\ObjectManager;
 final class TagFixtures extends Fixture
 {
     /**
-     * Genres et modes de jeu réalistes, tous inférieurs à 30 caractères (contrainte de Tag::$name).
-     * L'ordre est important : VideoGameFixtures s'appuie sur les références "tag_<index>".
+     * L'ordre compte : VideoGameFixtures utilise les références "tag_<index>".
      */
     public const TAGS = [
         'Action',

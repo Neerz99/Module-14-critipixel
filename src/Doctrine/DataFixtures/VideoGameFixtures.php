@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Doctrine\DataFixtures;
 
 use App\Model\Entity\Review;
@@ -14,32 +16,21 @@ use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Persistence\ObjectManager;
 use Faker\Generator;
 
-use function array_fill_callback;
-
 final class VideoGameFixtures extends Fixture implements DependentFixtureInterface
 {
-    /**
-     * Écarts appliqués à la note de la rédaction pour obtenir des notes d'utilisateurs
-     * plausibles : la plupart proches de l'avis de la rédaction, quelques avis plus tranchés.
-     */
+    // Écart entre la note de l'utilisateur et celle de la rédaction
     private const RATING_OFFSETS = [0, 1, -1, 0, 2, -2, 1, 0, -1];
 
-    /**
-     * Nombre maximum d'avis par jeu : un par utilisateur, à l'exception de user+0.
-     */
+    // 1 avis max par utilisateur, user+0 n'en écrit aucun
     private const MAX_REVIEWS_PER_VIDEO_GAME = 9;
 
-    /**
-     * Commentaires de joueurs dont le ton correspond à la note attribuée,
-     * pour qu'un avis à 1/5 ne soit jamais accompagné d'un commentaire élogieux.
-     */
     private const COMMENTS_BY_TONE = [
         'negative' => [
             'Très déçu. Le jeu plante régulièrement et les temps de chargement sont interminables.',
             'Une histoire sans intérêt et une maniabilité rigide. Je n\'ai pas dépassé les premières heures.',
             'Beaucoup trop cher pour ce que c\'est : contenu répétitif et fin bâclée.',
             'Les promesses de la bande-annonce ne sont pas tenues. Graphismes datés et IA à la ramasse.',
-            'Des bugs à chaque partie, des sauvegardes corrompues… À éviter tant qu\'il n\'y a pas de patch.',
+            'Des bugs à chaque partie, des sauvegardes corrompues... À éviter tant qu\'il n\'y a pas de patch.',
         ],
         'mixed' => [
             'Pas mauvais, mais sans surprise. Les fans du genre y trouveront leur compte.',
@@ -61,19 +52,18 @@ final class VideoGameFixtures extends Fixture implements DependentFixtureInterfa
     public function __construct(
         private readonly Generator $faker,
         private readonly CalculateAverageRating $calculateAverageRating,
-        private readonly CountRatingsPerValue $countRatingsPerValue
+        private readonly CountRatingsPerValue $countRatingsPerValue,
     ) {
     }
 
     public function load(ObjectManager $manager): void
     {
-        // Indexation par e-mail : l'ordre retourné par findAll() n'est pas garanti.
         $users = [];
         foreach ($manager->getRepository(User::class)->findAll() as $user) {
             $users[$user->getEmail()] = $user;
         }
 
-        $videoGames = array_fill_callback(0, 50, fn (int $index): VideoGame => (new VideoGame)
+        $videoGames = \array_fill_callback(0, 50, fn (int $index): VideoGame => (new VideoGame())
             ->setTitle(sprintf('Jeu vidéo %d', $index))
             ->setDescription($this->faker->paragraphs(10, true))
             ->setReleaseDate(new DateTimeImmutable())
@@ -83,9 +73,10 @@ final class VideoGameFixtures extends Fixture implements DependentFixtureInterfa
             ->setImageSize(2_098_872)
         );
 
-        array_walk($videoGames, $this->addTags(...));
-
-        array_walk($videoGames, [$manager, 'persist']);
+        foreach ($videoGames as $index => $videoGame) {
+            $this->addTags($videoGame, $index);
+            $manager->persist($videoGame);
+        }
 
         $manager->flush();
 
@@ -101,17 +92,13 @@ final class VideoGameFixtures extends Fixture implements DependentFixtureInterfa
         $manager->flush();
     }
 
-    /**
-     * Associe entre 1 et 4 tags distincts à chaque jeu. La répartition est déterministe
-     * pour que les tests fonctionnels de filtrage par tag restent reproductibles.
-     */
+    // Répartition fixe (1 à 4 tags par jeu) pour garder des tests de filtrage reproductibles
     private function addTags(VideoGame $videoGame, int $index): void
     {
         $numberOfTags = ($index % 4) + 1;
         $numberOfAvailableTags = count(TagFixtures::TAGS);
 
         for ($k = 0; $k < $numberOfTags; ++$k) {
-            // Le pas de 5 étant premier avec le nombre de tags (14), les tags obtenus sont distincts.
             $tagIndex = ($index + $k * 5) % $numberOfAvailableTags;
 
             $videoGame->getTags()->add(
@@ -121,13 +108,8 @@ final class VideoGameFixtures extends Fixture implements DependentFixtureInterfa
     }
 
     /**
-     * Crée entre 0 et 9 avis pour un jeu, chacun écrit par un utilisateur différent
-     * (un utilisateur ne peut noter qu'une fois un même jeu, cf. VideoGameVoter).
-     *
-     * L'utilisateur user+0 ne rédige aucun avis afin de pouvoir être utilisé dans les
-     * tests fonctionnels de dépôt d'avis sur n'importe quel jeu.
-     *
      * @param array<string, User> $users
+     *
      * @return Review[]
      */
     private function createReviews(VideoGame $videoGame, int $index, array $users): array
@@ -143,10 +125,8 @@ final class VideoGameFixtures extends Fixture implements DependentFixtureInterfa
                 ->setVideoGame($videoGame)
                 ->setUser($users[sprintf('user+%d@email.com', $userIndex)])
                 ->setRating($rating)
-                // Un avis sur trois est une note seule, sans commentaire.
                 ->setComment($k % 3 === 2 ? null : $this->createComment($rating));
 
-            // La collection inverse doit être alimentée pour que le calcul des notes en tienne compte.
             $videoGame->getReviews()->add($review);
             $reviews[] = $review;
         }
